@@ -14,11 +14,27 @@ using UnityEngine;
 public class ChefController : MonoBehaviour
 {
     //Public Variables
-    public InputTheme _inputs;
-    public float _speed = 5;
+    public InputTheme 
+        _inputs;
+    public float 
+        _speed = 5;
+    public GameObject 
+        _interactable;
+    public SaladInventory.Ingredient[] 
+        _collected = { SaladInventory.Ingredient.Empty, SaladInventory.Ingredient.Empty};
+
+    public SpriteRenderer 
+        mainInventory,
+        secondaryInventory;
 
     //Private Variables
-    float yMove = 0, xMove = 0;
+    float 
+        yMove = 0, 
+        xMove = 0;
+    Rigidbody2D 
+        _collider;
+
+
     [SerializeField]
     int _playerID = 0;
 
@@ -45,12 +61,18 @@ public class ChefController : MonoBehaviour
                 _inputs = new InputTheme(KeyCode.W, KeyCode.S, KeyCode.A, KeyCode.D, KeyCode.Space);
             }
         }
-        
+
+        _collider = gameObject.GetComponent<Rigidbody2D>();
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (Input.GetKeyDown(_inputs._interact) && _interactable)
+        {
+            _interactable.SendMessage("Interact", this);
+        }
+
         //Vertical movement controlled by the KeyCodes saved in the player's InputTheme struct.
         if (Input.GetKey(_inputs._up))
         {
@@ -74,9 +96,15 @@ public class ChefController : MonoBehaviour
         //Apply the movement to the player's position if one of the inputs are pressed.
         if (yMove != 0 || xMove != 0)
         {
-            transform.position += new Vector3(xMove, yMove) * _speed * Time.deltaTime;
+            _collider.position += new Vector2(xMove, yMove) * _speed * Time.deltaTime;
         }
         yMove = xMove = 0;
+    }
+
+    public void UpdateInventory()
+    {
+        mainInventory.color = SaladInventory.saladLogic.ingredientColors[(int)_collected[0]];
+        secondaryInventory.color = SaladInventory.saladLogic.ingredientColors[(int)_collected[1]];
     }
 }
 
