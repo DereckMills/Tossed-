@@ -18,8 +18,10 @@ public class ChefController : MonoBehaviour
         _inputs;
     public float 
         _speed = 5;
+    [HideInInspector]
     public GameObject 
-        _interactable;
+        _interactable,
+        _bowl;
     public SaladInventory.Ingredient[] 
         _collected = { SaladInventory.Ingredient.Empty, SaladInventory.Ingredient.Empty};
 
@@ -33,6 +35,8 @@ public class ChefController : MonoBehaviour
         xMove = 0;
     Rigidbody2D 
         _collider;
+    bool
+        isCarrying;
 
 
     [SerializeField]
@@ -72,7 +76,10 @@ public class ChefController : MonoBehaviour
         {
             _interactable.SendMessage("Interact", this);
         }
+    }
 
+    private void LateUpdate()
+    {
         //Vertical movement controlled by the KeyCodes saved in the player's InputTheme struct.
         if (Input.GetKey(_inputs._up))
         {
@@ -96,7 +103,8 @@ public class ChefController : MonoBehaviour
         //Apply the movement to the player's position if one of the inputs are pressed.
         if (yMove != 0 || xMove != 0)
         {
-            _collider.position += new Vector2(xMove, yMove) * _speed * Time.deltaTime;
+            //_collider.position += new Vector2(xMove, yMove) * _speed * Time.deltaTime;
+            _collider.MovePosition(_collider.position + new Vector2(xMove, yMove) * _speed * Time.deltaTime);
         }
         yMove = xMove = 0;
     }
