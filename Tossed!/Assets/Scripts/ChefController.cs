@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 /* Player Control Script
  * Created by: Dereck Mills
@@ -16,7 +17,8 @@ public class ChefController : MonoBehaviour
         _inputs;
     public float
         _speed = 5,
-        _choppingTime = 1;
+        _choppingTime = 1,
+        _timeLimit = 150;
     [HideInInspector]
     public GameObject
         _interactable,
@@ -28,6 +30,11 @@ public class ChefController : MonoBehaviour
         _mainInventory,
         _secondaryInventory;
 
+    public Slider
+        _progressBar;
+    public Text
+        _infoPanel;
+
     //Private Variables
     float
         yMove = 0,
@@ -37,7 +44,8 @@ public class ChefController : MonoBehaviour
         _collider;
     bool
         isCarrying,
-        isChopping;
+        isChopping,
+        isTimeOut;
 
 
     [SerializeField]
@@ -52,6 +60,11 @@ public class ChefController : MonoBehaviour
     public bool Carrying
     {
         set { isCarrying = value; }
+    }
+
+    public bool TimeOut
+    {
+        get { return isTimeOut; }
     }
 
     // Start is called before the first frame update
@@ -72,14 +85,26 @@ public class ChefController : MonoBehaviour
             }
         }
 
+        _progressBar.gameObject.SetActive(false);
         _collider = gameObject.GetComponent<Rigidbody2D>();
     }
 
     // Update is called once per frame
     void Update()
     {
+        //Update the UI
+        if (!isTimeOut)
+        {
+            _timeLimit -= Time.deltaTime;
+            if (_timeLimit <= 0)
+            {
+                _timeLimit = 0;
+                isTimeOut = true;
+            }
+        }
+        _infoPanel.text = "Time Remaining: " + _timeLimit.ToString("f0") + "\nScore: " + PointManager.points.PointRequest(_playerID);
         //If the player is not actively chopping..
-        if (!isChopping)
+        if (!isChopping && !isTimeOut)
         {
             //Attempt to interact if there is an interactable object nearby
             if (Input.GetKeyDown(_inputs._interact) && _interactable)
@@ -134,12 +159,16 @@ public class ChefController : MonoBehaviour
     {
         if (!isChopping)
         {
+            _progressBar.gameObject.SetActive(true);
+            _progressBar.value = 0;
             isChopping = true;
             for (chopTimeRemaining = _choppingTime; chopTimeRemaining > 0; chopTimeRemaining -= Time.deltaTime)
             {
+                _progressBar.value = (_choppingTime - chopTimeRemaining) / _choppingTime;
                 yield return null;
             }
             isChopping = false;
+            _progressBar.gameObject.SetActive(false);
             if (_interactable)
             {
                 _interactable.GetComponent<CuttingBoard>().Chopped();

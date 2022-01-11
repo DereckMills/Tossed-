@@ -14,9 +14,15 @@ public class CustomerLogic : MonoBehaviour
     public enum Location { Left, Center, Right };
     public Location 
         _location = Location.Center;
-    public float 
+    public float
         _moveSpeed = 5;
-    public SpriteRenderer[] orderIndictors = new SpriteRenderer[3];
+    public int
+        _badOrderPenalty = -50,
+        _correctOrderBase = 10,
+        _exponentialIncrease = 3;
+
+    public SpriteRenderer[] 
+        orderIndictors = new SpriteRenderer[3];
 
     //Private Variables
     bool 
@@ -98,7 +104,7 @@ public class CustomerLogic : MonoBehaviour
     //Interact method to be called from the Player script when interacting
     public void Interact(ChefController player)
     {
-        //If the player has a plate,,,
+        //If the player has a plate...
         if (player._bowl)
         {
             //Save the item list to an array to be reference
@@ -107,20 +113,19 @@ public class CustomerLogic : MonoBehaviour
             //If the plate has a second item and the order doesn't
             if (order[1] == SaladInventory.Ingredient.Empty && plate[1] != SaladInventory.Ingredient.Empty)
             {
-                //Return Negative Points
-                Debug.Log("Incorrect! Unneeded 2nd Item!");
+                PointManager.points.AdjustPoints(_badOrderPenalty, player.PlayerID);
             }
             //If the plate has a third item and the order doesn't
             else if (order[2] == SaladInventory.Ingredient.Empty && plate[2] != SaladInventory.Ingredient.Empty)
             {
-                //Return Negative Points
-                Debug.Log("Incorrect! Unneeded 3rd Item!");
+                PointManager.points.AdjustPoints(_badOrderPenalty, player.PlayerID);
             }
             //Check to see if the plate has all the items from the order
             else
             {
                 //Start with the assumption that all items are correct
                 bool correct = true;
+                int orderNum = -1;
                 //For each item in the order...
                 for (int i = 0; i < order.Length; i++)
                 {
@@ -129,6 +134,7 @@ public class CustomerLogic : MonoBehaviour
                     {
                         //Check to see if it is found on the plate.
                         bool found = false;
+                        orderNum++;
                         foreach (SaladInventory.Ingredient item in plate)
                         {
                             if (item == order[i])
@@ -137,8 +143,7 @@ public class CustomerLogic : MonoBehaviour
                         //If not found, end the check and remove points from the player
                         if (!found)
                         {
-                            //Return Negative Points
-                            Debug.Log("Incorrect! Wrong Item!");
+                            PointManager.points.AdjustPoints(_badOrderPenalty, player.PlayerID);
                             correct = false;
                             break;
                         }
@@ -147,8 +152,7 @@ public class CustomerLogic : MonoBehaviour
                 //If the entire order is correct, add points
                 if (correct)
                 {
-                    //Add Positive Points
-                    Debug.Log("Good Job!");
+                    PointManager.points.AdjustPoints(_correctOrderBase * (int)Mathf.Pow(_exponentialIncrease,orderNum), player.PlayerID);
                 }
             }
             //Once the order has been checked, remove the customer and the plate

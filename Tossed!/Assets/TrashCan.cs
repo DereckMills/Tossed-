@@ -12,7 +12,8 @@ using UnityEngine;
 public class TrashCan : MonoBehaviour
 {
     //Public Variables
-
+    public int
+        _ingredientPenalty = -10;
     //Private Variables
     [SerializeField]
     SpriteRenderer 
@@ -30,13 +31,20 @@ public class TrashCan : MonoBehaviour
         if (player._bowl)
         {
             //Destroy the Bowl and remove points 
-            //Give Negative Points
+            int pointsLost = 0;
+            foreach(SaladInventory.Ingredient item in player._bowl.GetComponent<SaladDish>()._items)
+            {
+                if (item != SaladInventory.Ingredient.Empty)
+                    pointsLost += _ingredientPenalty;
+            }
+            PointManager.points.AdjustPoints(pointsLost, player.PlayerID);
+
             Destroy(player._bowl.gameObject);
             player._bowl = null;
         //If the player doesn't have a bowl, but has something in their hand...
         } else if (player._collected[0] != SaladInventory.Ingredient.Empty){
             //Remove the main item and remove points
-            //Give Negative Points
+            PointManager.points.AdjustPoints(_ingredientPenalty, player.PlayerID);
             //If the player has a second item, move that to the main hand.
             if (player._collected[1] != SaladInventory.Ingredient.Empty)
             {
