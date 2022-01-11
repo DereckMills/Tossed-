@@ -6,29 +6,25 @@ using UnityEngine;
  * Created by: Dereck Mills
  * 
  * This script will allow the player to pickup ingredients from the sources.
- * 
- * Requirements: --
  /**/
 
 public class Stockpile : MonoBehaviour
 {
     //Public Variables
-    public SaladInventory.Ingredient source = SaladInventory.Ingredient.Cabbage;
+    public SaladInventory.Ingredient 
+        source = SaladInventory.Ingredient.Cabbage;
 
     //Private Variables
     [SerializeField]
-    SpriteRenderer selector;
+    SpriteRenderer 
+        selector;
     // Start is called before the first frame update
-    void Start()
-    {
-    }
+    void Start() { }
 
     // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    void Update() { }
 
+    //Interact method to be called from the Player script when interacting
     public void Interact(ChefController player)
     {
         if (player._collected[0] == SaladInventory.Ingredient.Empty)

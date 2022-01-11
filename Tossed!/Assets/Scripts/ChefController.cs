@@ -7,36 +7,37 @@ using UnityEngine;
  * 
  * This script will contain all of the code required to control the two(2) player characters
  * in Tossed! 
- * 
- * Requirements: Input Theme struct must be set in Inspector before first play.
  /**/
 
 public class ChefController : MonoBehaviour
 {
     //Public Variables
-    public InputTheme 
+    public InputTheme
         _inputs;
-    public float 
-        _speed = 5;
+    public float
+        _speed = 5,
+        _choppingTime = 1;
     [HideInInspector]
-    public GameObject 
+    public GameObject
         _interactable,
         _bowl;
-    public SaladInventory.Ingredient[] 
-        _collected = { SaladInventory.Ingredient.Empty, SaladInventory.Ingredient.Empty};
+    public SaladInventory.Ingredient[]
+        _collected = { SaladInventory.Ingredient.Empty, SaladInventory.Ingredient.Empty };
 
-    public SpriteRenderer 
-        mainInventory,
-        secondaryInventory;
+    public SpriteRenderer
+        _mainInventory,
+        _secondaryInventory;
 
     //Private Variables
-    float 
-        yMove = 0, 
-        xMove = 0;
-    Rigidbody2D 
+    float
+        yMove = 0,
+        xMove = 0,
+        chopTimeRemaining = 0;
+    Rigidbody2D
         _collider;
     bool
-        isCarrying;
+        isCarrying,
+        isChopping;
 
 
     [SerializeField]
@@ -48,6 +49,11 @@ public class ChefController : MonoBehaviour
         get { return _playerID; }
     }
 
+    public bool Carrying
+    {
+        set { isCarrying = value; }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -57,12 +63,12 @@ public class ChefController : MonoBehaviour
             //Apply Arrow Key controls for the second Player 
             if (_playerID == 1)
             {
-                _inputs = new InputTheme(KeyCode.UpArrow, KeyCode.DownArrow, KeyCode.LeftArrow, KeyCode.RightArrow, KeyCode.Alpha0);
+                _inputs = new InputTheme(KeyCode.UpArrow, KeyCode.DownArrow, KeyCode.LeftArrow, KeyCode.RightArrow, KeyCode.Alpha0, KeyCode.RightControl);
             }
             //Apply WASD controls for all other instances
             else
             {
-                _inputs = new InputTheme(KeyCode.W, KeyCode.S, KeyCode.A, KeyCode.D, KeyCode.Space);
+                _inputs = new InputTheme(KeyCode.W, KeyCode.S, KeyCode.A, KeyCode.D, KeyCode.Space, KeyCode.LeftShift);
             }
         }
 
@@ -72,50 +78,85 @@ public class ChefController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(_inputs._interact) && _interactable)
+        //If the player is not actively chopping..
+        if (!isChopping)
         {
-            _interactable.SendMessage("Interact", this);
+            //Attempt to interact if there is an interactable object nearby
+            if (Input.GetKeyDown(_inputs._interact) && _interactable)
+            {
+                _interactable.SendMessage("Interact", this);
+            }
+            //Attempt to swap items
+            if (Input.GetKeyDown(_inputs._swap))
+            {
+                if (_collected[0] != SaladInventory.Ingredient.Empty && _collected[1] != SaladInventory.Ingredient.Empty)
+                {
+                    SaladInventory.Ingredient temp = _collected[1];
+                    _collected[1] = _collected[0];
+                    _collected[0] = temp;
+                    UpdateInventory();
+                }
+            }
+        
+            _collider.velocity = Vector3.zero;
+            //Vertical movement controlled by the KeyCodes saved in the player's InputTheme struct.
+            if (Input.GetKey(_inputs._up))
+            {
+                yMove = 1;
+            }
+            else if (Input.GetKey(_inputs._down))
+            {
+                yMove = -1;
+            }
+
+            //Horizontal movement controlled by the KeyCodes saved in the player's InputTheme struct.
+            if (Input.GetKey(_inputs._right))
+            {
+                xMove = 1;
+            }
+            else if (Input.GetKey(_inputs._left))
+            {
+                xMove = -1;
+            }
+
+            //Apply the movement to the player's position if one of the inputs are pressed.
+            if (yMove != 0 || xMove != 0)
+            {
+                //_collider.position += new Vector2(xMove, yMove) * _speed * Time.deltaTime;
+                _collider.MovePosition(_collider.position + new Vector2(xMove, yMove) * _speed * Time.deltaTime);
+            }
+            yMove = xMove = 0;
         }
     }
 
-    private void LateUpdate()
+    //Coroutine to control the chop time at the Chopping table
+    public IEnumerator ChopTime()
     {
-        //Vertical movement controlled by the KeyCodes saved in the player's InputTheme struct.
-        if (Input.GetKey(_inputs._up))
+        if (!isChopping)
         {
-            yMove = 1;
-        }
-        else if (Input.GetKey(_inputs._down))
-        {
-            yMove = -1;
-        }
-
-        //Horizontal movement controlled by the KeyCodes saved in the player's InputTheme struct.
-        if (Input.GetKey(_inputs._right))
-        {
-            xMove = 1;
-        }
-        else if (Input.GetKey(_inputs._left))
-        {
-            xMove = -1;
+            isChopping = true;
+            for (chopTimeRemaining = _choppingTime; chopTimeRemaining > 0; chopTimeRemaining -= Time.deltaTime)
+            {
+                yield return null;
+            }
+            isChopping = false;
+            if (_interactable)
+            {
+                _interactable.GetComponent<CuttingBoard>().Chopped();
+            }
         }
 
-        //Apply the movement to the player's position if one of the inputs are pressed.
-        if (yMove != 0 || xMove != 0)
-        {
-            //_collider.position += new Vector2(xMove, yMove) * _speed * Time.deltaTime;
-            _collider.MovePosition(_collider.position + new Vector2(xMove, yMove) * _speed * Time.deltaTime);
-        }
-        yMove = xMove = 0;
     }
 
+    //Foreach diplay item, change it to the color of the ingredient in that slot
     public void UpdateInventory()
     {
-        mainInventory.color = SaladInventory.saladLogic.ingredientColors[(int)_collected[0]];
-        secondaryInventory.color = SaladInventory.saladLogic.ingredientColors[(int)_collected[1]];
+        _mainInventory.color = SaladInventory.saladLogic.ingredientColors[(int)_collected[0]];
+        _secondaryInventory.color = SaladInventory.saladLogic.ingredientColors[(int)_collected[1]];
     }
 }
 
+//Data object to control the character's input controls
 [System.Serializable]
 public struct InputTheme
 {
@@ -125,15 +166,17 @@ public struct InputTheme
         _down,
         _left,
         _right,
-        _interact;
+        _interact,
+        _swap;
 
     //Contructor method to allow the editting of the struct for custom keybindings.
-    public InputTheme(KeyCode up, KeyCode down, KeyCode left, KeyCode right, KeyCode interact)
+    public InputTheme(KeyCode up, KeyCode down, KeyCode left, KeyCode right, KeyCode interact, KeyCode swap)
     {
         _up = up;
         _down = down;
         _right = right;
         _left = left;
         _interact = interact;
+        _swap = swap;
     }
 }

@@ -6,12 +6,11 @@ using UnityEngine;
  * Created by: Dereck Mills
  * 
  * This script controls the Customers that have been spawned in by the Master Script
- * 
- * Requirements: --
  /**/
 
 public class CustomerLogic : MonoBehaviour
 {
+    //public Variables
     public enum Location { Left, Center, Right };
     public Location 
         _location = Location.Center;
@@ -20,21 +19,25 @@ public class CustomerLogic : MonoBehaviour
     public SpriteRenderer[] orderIndictors = new SpriteRenderer[3];
 
     //Private Variables
-    bool isMoving;
-    Vector3 targetLocation;
+    bool 
+        isMoving;
+    Vector3 
+        targetLocation;
     [SerializeField]
-    SpriteRenderer selector;
+    SpriteRenderer 
+        selector;
+    SaladInventory.Ingredient[] 
+        order;
     // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    void Start() { }
 
     // Update is called once per frame
     void Update()
     {
+        //If the Customer is flagged moving...
         if (isMoving)
         {
+            //Move vertically first
             if (targetLocation.y != transform.position.y)
             {
                 if (targetLocation.y > transform.position.y)
@@ -50,6 +53,7 @@ public class CustomerLogic : MonoBehaviour
                         transform.position = new Vector3(transform.position.x, targetLocation.y, transform.position.z);
                 }
             }
+            //Then move horizontally
             else if (targetLocation.x != transform.position.x)
             {
                 if (targetLocation.x > transform.position.x)
@@ -65,6 +69,7 @@ public class CustomerLogic : MonoBehaviour
                         transform.position = new Vector3(targetLocation.x, transform.position.y, transform.position.z);
                 }
             }
+            //If the player is at the target location, stop moving
             else
             {
                 isMoving = false;
@@ -73,15 +78,83 @@ public class CustomerLogic : MonoBehaviour
         
     }
 
+    //Fill out customer information from the generator
     public void Prep(Location side, Vector3 moveOffset, SaladInventory.Ingredient[] newOrder)
     {
+        //Spawn the customer above the screen, in the moving state, and on the side it was told.
         _location = side;
         isMoving = true;
         targetLocation = transform.position + moveOffset;
 
+        //Change the order colors to match what plate they want
         for(int i = 0; i < newOrder.Length; i++)
         {
             orderIndictors[i].color = SaladInventory.saladLogic.ingredientColors[(int)newOrder[i]];
+        }
+
+        order = newOrder;
+    }
+
+    //Interact method to be called from the Player script when interacting
+    public void Interact(ChefController player)
+    {
+        //If the player has a plate,,,
+        if (player._bowl)
+        {
+            //Save the item list to an array to be reference
+            SaladInventory.Ingredient[] plate = player._bowl.GetComponent<SaladDish>()._items;
+
+            //If the plate has a second item and the order doesn't
+            if (order[1] == SaladInventory.Ingredient.Empty && plate[1] != SaladInventory.Ingredient.Empty)
+            {
+                //Return Negative Points
+                Debug.Log("Incorrect! Unneeded 2nd Item!");
+            }
+            //If the plate has a third item and the order doesn't
+            else if (order[2] == SaladInventory.Ingredient.Empty && plate[2] != SaladInventory.Ingredient.Empty)
+            {
+                //Return Negative Points
+                Debug.Log("Incorrect! Unneeded 3rd Item!");
+            }
+            //Check to see if the plate has all the items from the order
+            else
+            {
+                //Start with the assumption that all items are correct
+                bool correct = true;
+                //For each item in the order...
+                for (int i = 0; i < order.Length; i++)
+                {
+                    //If the order ingredient is not empty...
+                    if (order[i] != SaladInventory.Ingredient.Empty)
+                    {
+                        //Check to see if it is found on the plate.
+                        bool found = false;
+                        foreach (SaladInventory.Ingredient item in plate)
+                        {
+                            if (item == order[i])
+                                found = true;
+                        }
+                        //If not found, end the check and remove points from the player
+                        if (!found)
+                        {
+                            //Return Negative Points
+                            Debug.Log("Incorrect! Wrong Item!");
+                            correct = false;
+                            break;
+                        }
+                    }
+                }
+                //If the entire order is correct, add points
+                if (correct)
+                {
+                    //Add Positive Points
+                    Debug.Log("Good Job!");
+                }
+            }
+            //Once the order has been checked, remove the customer and the plate
+            Leave();
+            Destroy(player._bowl);
+            player._bowl = null;
         }
     }
 
