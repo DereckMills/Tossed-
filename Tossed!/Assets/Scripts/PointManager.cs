@@ -49,23 +49,26 @@ public class PointManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //Check for GameOver
-        bool gameOver = true;
-        foreach (ChefController player in _players)
-            if (!player.TimeOut)
-                gameOver = false;
-        if (gameOver)
+        if (!_isGameOver)
         {
-            _isGameOver = true;
-            Color winningColor = Color.grey;
+            //Check for GameOver
+            bool gameOver = true;
+            foreach (ChefController player in _players)
+                if (!player.TimeOut)
+                    gameOver = false;
+            if (gameOver)
+            {
+                _isGameOver = true;
+                Color winningColor = Color.grey;
 
-            if (_pointRecord[0] > _pointRecord[1])
-                winningColor = _players[0].GetComponent<SpriteRenderer>().color;
-            else if (_pointRecord[1] > _pointRecord[0])
-                winningColor = _players[1].GetComponent<SpriteRenderer>().color;
+                if (_pointRecord[0] > _pointRecord[1])
+                    winningColor = _players[0].GetComponent<SpriteRenderer>().color;
+                else if (_pointRecord[1] > _pointRecord[0])
+                    winningColor = _players[1].GetComponent<SpriteRenderer>().color;
 
-            gameOverScreen.SetActive(true);
-            gameOverScreen.GetComponent<GameOverScreen>().GameOver(_pointRecord, winningColor);
+                gameOverScreen.SetActive(true);
+                gameOverScreen.GetComponent<GameOverScreen>().GameOver(_pointRecord, winningColor);
+            }
         }
     }
 

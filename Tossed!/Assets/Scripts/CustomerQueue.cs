@@ -15,7 +15,8 @@ public class CustomerQueue : MonoBehaviour
         queue;
     //public Variables
     public GameObject 
-        _customerObj;
+        _customerObj,
+        _powerUpObj;
     public Transform 
         _spawnLocation;
 
@@ -36,6 +37,10 @@ public class CustomerQueue : MonoBehaviour
     public int
         _rightCount,
         _leftCount;
+
+    public Vector3
+        _upperPowerUpLimit,
+        _lowerPowerUpLimit;
 
     //Private Variables
     bool
@@ -147,7 +152,7 @@ public class CustomerQueue : MonoBehaviour
             isCenter = false;
         }
         //If the missing Customer was in the Center...
-        if (openSpot == CustomerLogic.Location.Center)
+        else if (openSpot == CustomerLogic.Location.Center)
         {
             //If the right side has more customers, or if they are equal and the next would arrive on the right...
             if (_rightCount > _leftCount || (_rightCount == _leftCount && rightSpawnNext))
@@ -303,5 +308,13 @@ public class CustomerQueue : MonoBehaviour
 
             return newOrder;
         }
+    }
+
+    //Method to spawn the powerup for a quick player
+    public void GeneratePowerUp(ChefController _player)
+    {
+        GameObject powerUp = Instantiate(_powerUpObj);
+        powerUp.transform.position = new Vector3(Random.Range(_lowerPowerUpLimit.x, _upperPowerUpLimit.x), Random.Range(_lowerPowerUpLimit.y, _upperPowerUpLimit.y));
+        powerUp.GetComponent<PowerUpLogic>().Prep(_player.PlayerID, _player.GetComponent<SpriteRenderer>().color,(PowerUpLogic.PowerUp)Random.Range(0,3));
     }
 }

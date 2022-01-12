@@ -65,76 +65,83 @@ public class CustomerLogic : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //If the Customer is flagged moving...
-        if (isMoving)
+        if (!PointManager.points._isGameOver)
         {
-            //Move vertically first
-            if (targetLocation.y != transform.position.y)
+            //If the Customer is flagged moving...
+            if (isMoving)
             {
-                if (targetLocation.y > transform.position.y)
+                //Move vertically first
+                if (targetLocation.y != transform.position.y)
                 {
-                    transform.position += new Vector3(0, _moveSpeed) * Time.deltaTime;
-                    if (transform.position.y > targetLocation.y)
-                        transform.position = new Vector3(transform.position.x, targetLocation.y, transform.position.z);
+                    if (targetLocation.y > transform.position.y)
+                    {
+                        transform.position += new Vector3(0, _moveSpeed) * Time.deltaTime;
+                        if (transform.position.y > targetLocation.y)
+                            transform.position = new Vector3(transform.position.x, targetLocation.y, transform.position.z);
+                    }
+                    else
+                    {
+                        transform.position -= new Vector3(0, _moveSpeed) * Time.deltaTime;
+                        if (transform.position.y < targetLocation.y)
+                            transform.position = new Vector3(transform.position.x, targetLocation.y, transform.position.z);
+                    }
                 }
+                //Then move horizontally
+                else if (targetLocation.x != transform.position.x)
+                {
+                    if (targetLocation.x > transform.position.x)
+                    {
+                        transform.position += new Vector3(_moveSpeed, 0) * Time.deltaTime;
+                        if (transform.position.x > targetLocation.x)
+                            transform.position = new Vector3(targetLocation.x, transform.position.y, transform.position.z);
+                    }
+                    else
+                    {
+                        transform.position -= new Vector3(_moveSpeed, 0) * Time.deltaTime;
+                        if (transform.position.x < targetLocation.x)
+                            transform.position = new Vector3(targetLocation.x, transform.position.y, transform.position.z);
+                    }
+                }
+                //If the player is at the target location, stop moving
                 else
                 {
-                    transform.position -= new Vector3(0, _moveSpeed) * Time.deltaTime;
-                    if (transform.position.y < targetLocation.y)
-                        transform.position = new Vector3(transform.position.x, targetLocation.y, transform.position.z);
+                    isMoving = false;
                 }
             }
-            //Then move horizontally
-            else if (targetLocation.x != transform.position.x)
+            else
             {
-                if (targetLocation.x > transform.position.x)
-                {
-                    transform.position += new Vector3(_moveSpeed,0) * Time.deltaTime;
-                    if (transform.position.x > targetLocation.x)
-                        transform.position = new Vector3(targetLocation.x,transform.position.y, transform.position.z);
-                }
+                //If the progress bar is not active, turn it on
+                if (!_progressBar.gameObject.activeInHierarchy)
+                    _progressBar.gameObject.SetActive(true);
+                //If the customer is angry, make them leave faster
+                if (isAngry)
+                    timeRemaining -= Time.deltaTime * _angryPenalty;
                 else
-                {
-                    transform.position -= new Vector3(_moveSpeed,0) * Time.deltaTime;
-                    if (transform.position.x < targetLocation.x)
-                        transform.position = new Vector3(targetLocation.x, transform.position.y, transform.position.z);
-                }
-            }
-            //If the player is at the target location, stop moving
-            else
-            {
-                isMoving = false;
-            }
-        }
-        else
-        {
-            if (!_progressBar.gameObject.activeInHierarchy)
-                _progressBar.gameObject.SetActive(true);
-            if (isAngry)
-                timeRemaining -= Time.deltaTime * _angryPenalty;
-            else
-                timeRemaining -= Time.deltaTime;
+                    timeRemaining -= Time.deltaTime;
 
-            _progressBar.value = timeRemaining / timeLimit;
-            if (_progressBar.value <= _spawnPickupPercent)
-                _barColor.color = _progressRisk;
-            else if (_progressBar.value <= 1 - _spawnPickupPercent)
-                _barColor.color = _progressCaution;
-            else
-                _barColor.color = _progressGood;
+                _progressBar.value = timeRemaining / timeLimit;
 
-            if (timeRemaining <= 0)
-            {
-                if (!isAngry)
-                    PointManager.points.AdjustPoints(_badOrderPenalty, -1);
+                //Change the color of the bar based on the progress
+                if (_progressBar.value <= _spawnPickupPercent)
+                    _barColor.color = _progressRisk;
+                else if (_progressBar.value <= 1 - _spawnPickupPercent)
+                    _barColor.color = _progressCaution;
                 else
+                    _barColor.color = _progressGood;
+
+                if (timeRemaining <= 0)
                 {
-                    if (angryAtPlayer1)
-                        PointManager.points.AdjustPoints(_badOrderPenalty * 2, 0);
-                    if (angryAtPlayer2)
-                        PointManager.points.AdjustPoints(_badOrderPenalty * 2, 1);
+                    if (!isAngry)
+                        PointManager.points.AdjustPoints(_badOrderPenalty, -1);
+                    else
+                    {
+                        if (angryAtPlayer1)
+                            PointManager.points.AdjustPoints(_badOrderPenalty * 2, 0);
+                        if (angryAtPlayer2)
+                            PointManager.points.AdjustPoints(_badOrderPenalty * 2, 1);
+                    }
+                    Leave();
                 }
-                Leave();
             }
         }
     }
@@ -238,6 +245,10 @@ public class CustomerLogic : MonoBehaviour
                 //If the entire order is correct, add points and remove the customer
                 if (correct)
                 {
+                    if (timeRemaining/timeLimit >= _spawnPickupPercent)
+                    {
+                        CustomerQueue.queue.GeneratePowerUp(player);
+                    }
                     PointManager.points.AdjustPoints(_correctOrderBase * (int)Mathf.Pow(_exponentialIncrease,orderNum), player.PlayerID);
                     Leave();
                 }

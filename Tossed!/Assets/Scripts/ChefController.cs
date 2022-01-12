@@ -18,7 +18,8 @@ public class ChefController : MonoBehaviour
     public float
         _speed = 5,
         _choppingTime = 1,
-        _timeLimit = 150;
+        _timeLimit = 150,
+        _speedBonusTime = 10;
     [HideInInspector]
     public GameObject
         _interactable,
@@ -39,13 +40,17 @@ public class ChefController : MonoBehaviour
     float
         yMove = 0,
         xMove = 0,
-        chopTimeRemaining = 0;
+        chopTimeRemaining = 0,
+        speedBonus,
+        speedBonusRemaining;
+
     Rigidbody2D
         _collider;
     bool
         isCarrying,
         isChopping,
-        isTimeOut;
+        isTimeOut,
+        isSpeed;
 
 
     [SerializeField]
@@ -122,7 +127,7 @@ public class ChefController : MonoBehaviour
                     UpdateInventory();
                 }
             }
-        
+
             _collider.velocity = Vector3.zero;
             //Vertical movement controlled by the KeyCodes saved in the player's InputTheme struct.
             if (Input.GetKey(_inputs._up))
@@ -147,8 +152,16 @@ public class ChefController : MonoBehaviour
             //Apply the movement to the player's position if one of the inputs are pressed.
             if (yMove != 0 || xMove != 0)
             {
-                //_collider.position += new Vector2(xMove, yMove) * _speed * Time.deltaTime;
-                _collider.MovePosition(_collider.position + new Vector2(xMove, yMove) * _speed * Time.deltaTime);
+                if (!isSpeed)
+                {
+                    //_collider.position += new Vector2(xMove, yMove) * _speed * Time.deltaTime;
+                    _collider.MovePosition(_collider.position + new Vector2(xMove, yMove) * _speed * Time.deltaTime);
+                }
+                else
+                {
+                    //_collider.position += new Vector2(xMove, yMove) * _speed * Time.deltaTime * speedBonus;
+                    _collider.MovePosition(_collider.position + new Vector2(xMove, yMove) * _speed * Time.deltaTime * speedBonus);
+                }
             }
             yMove = xMove = 0;
         }
@@ -174,7 +187,25 @@ public class ChefController : MonoBehaviour
                 _interactable.GetComponent<CuttingBoard>().Chopped();
             }
         }
+    }
 
+    //Coroutine to control the chop time at the Chopping table
+    public IEnumerator SpeedBonus(float bonus)
+    {
+        if (isSpeed)
+        {
+            speedBonusRemaining += _speedBonusTime;
+        }
+        if (!isSpeed)
+        {
+            isSpeed = true;
+            speedBonus = bonus;
+            for (speedBonusRemaining = _speedBonusTime; speedBonusRemaining > 0; speedBonusRemaining -= Time.deltaTime)
+            {
+                yield return null;
+            }
+            isSpeed = false;
+        }
     }
 
     //Foreach diplay item, change it to the color of the ingredient in that slot
