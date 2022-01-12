@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 /* Customer Logic Script
  * Created by: Dereck Mills
@@ -15,7 +16,11 @@ public class CustomerLogic : MonoBehaviour
     public Location 
         _location = Location.Center;
     public float
-        _moveSpeed = 5;
+        _moveSpeed = 5,
+        _timePerIngredient = 10,
+        _angryPenalty = 1.2f,
+        _spawnPickupPercent = .3f;
+
     public int
         _badOrderPenalty = -50,
         _correctOrderBase = 10,
@@ -24,18 +29,38 @@ public class CustomerLogic : MonoBehaviour
     public SpriteRenderer[] 
         orderIndictors = new SpriteRenderer[3];
 
+    public Slider
+        _progressBar;
+
+    public Image
+        _barColor;
+
+    public Color
+        _progressGood,
+        _progressCaution,
+        _progressRisk;
+
     //Private Variables
     bool 
-        isMoving;
+        isMoving,
+        isAngry,
+        angryAtPlayer1,
+        angryAtPlayer2;
+
     Vector3 
         targetLocation;
+    float
+        timeRemaining,
+        timeLimit = 10;
     [SerializeField]
     SpriteRenderer 
         selector;
     SaladInventory.Ingredient[] 
         order;
     // Start is called before the first frame update
-    void Start() { }
+    void Start() {
+        _progressBar.transform.parent = GameObject.FindWithTag("Canvas").transform;
+    }
 
     // Update is called once per frame
     void Update()
@@ -81,7 +106,37 @@ public class CustomerLogic : MonoBehaviour
                 isMoving = false;
             }
         }
-        
+        else
+        {
+            if (!_progressBar.gameObject.activeInHierarchy)
+                _progressBar.gameObject.SetActive(true);
+            if (isAngry)
+                timeRemaining -= Time.deltaTime * _angryPenalty;
+            else
+                timeRemaining -= Time.deltaTime;
+
+            _progressBar.value = timeRemaining / timeLimit;
+            if (_progressBar.value <= _spawnPickupPercent)
+                _barColor.color = _progressRisk;
+            else if (_progressBar.value <= 1 - _spawnPickupPercent)
+                _barColor.color = _progressCaution;
+            else
+                _barColor.color = _progressGood;
+
+            if (timeRemaining <= 0)
+            {
+                if (!isAngry)
+                    PointManager.points.AdjustPoints(_badOrderPenalty, -1);
+                else
+                {
+                    if (angryAtPlayer1)
+                        PointManager.points.AdjustPoints(_badOrderPenalty * 2, 0);
+                    if (angryAtPlayer2)
+                        PointManager.points.AdjustPoints(_badOrderPenalty * 2, 1);
+                }
+                Leave();
+            }
+        }
     }
 
     //Fill out customer information from the generator
@@ -96,9 +151,21 @@ public class CustomerLogic : MonoBehaviour
         for(int i = 0; i < newOrder.Length; i++)
         {
             orderIndictors[i].color = SaladInventory.saladLogic.ingredientColors[(int)newOrder[i]];
+            if(newOrder[i] != SaladInventory.Ingredient.Empty)
+            {
+                timeLimit += _timePerIngredient;
+            }
         }
 
+        timeRemaining = timeLimit;
         order = newOrder;
+    }
+
+    //Tell the Customer where they are going
+    public void MoveCustomer(Vector3 offset)
+    {
+        targetLocation += offset;
+        isMoving = true;
     }
 
     //Interact method to be called from the Player script when interacting
@@ -113,12 +180,24 @@ public class CustomerLogic : MonoBehaviour
             //If the plate has a second item and the order doesn't
             if (order[1] == SaladInventory.Ingredient.Empty && plate[1] != SaladInventory.Ingredient.Empty)
             {
-                PointManager.points.AdjustPoints(_badOrderPenalty, player.PlayerID);
+                isAngry = true;
+                gameObject.GetComponent<SpriteRenderer>().color = Color.red;
+
+                if (player.PlayerID == 0)
+                    angryAtPlayer1 = true;
+                if (player.PlayerID == 1)
+                    angryAtPlayer2 = true;
             }
             //If the plate has a third item and the order doesn't
             else if (order[2] == SaladInventory.Ingredient.Empty && plate[2] != SaladInventory.Ingredient.Empty)
             {
-                PointManager.points.AdjustPoints(_badOrderPenalty, player.PlayerID);
+                isAngry = true;
+                gameObject.GetComponent<SpriteRenderer>().color = Color.red;
+
+                if (player.PlayerID == 0)
+                    angryAtPlayer1 = true;
+                if (player.PlayerID == 1)
+                    angryAtPlayer2 = true;
             }
             //Check to see if the plate has all the items from the order
             else
@@ -143,20 +222,27 @@ public class CustomerLogic : MonoBehaviour
                         //If not found, end the check and remove points from the player
                         if (!found)
                         {
-                            PointManager.points.AdjustPoints(_badOrderPenalty, player.PlayerID);
+                            isAngry = true;
+                            gameObject.GetComponent<SpriteRenderer>().color = Color.red;
+
+                            if (player.PlayerID == 0)
+                                angryAtPlayer1 = true;
+                            if (player.PlayerID == 1)
+                                angryAtPlayer2 = true;
+
                             correct = false;
                             break;
                         }
                     }
                 }
-                //If the entire order is correct, add points
+                //If the entire order is correct, add points and remove the customer
                 if (correct)
                 {
                     PointManager.points.AdjustPoints(_correctOrderBase * (int)Mathf.Pow(_exponentialIncrease,orderNum), player.PlayerID);
+                    Leave();
                 }
             }
-            //Once the order has been checked, remove the customer and the plate
-            Leave();
+            //Once the order has been checked, remove the plate
             Destroy(player._bowl);
             player._bowl = null;
         }
@@ -188,6 +274,8 @@ public class CustomerLogic : MonoBehaviour
 
     void Leave()
     {
-
+        CustomerQueue.queue.AdjustCustomers(_location, this);
+        Destroy(_progressBar.gameObject);
+        Destroy(this.gameObject);
     }
 }

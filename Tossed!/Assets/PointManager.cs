@@ -17,7 +17,10 @@ public class PointManager : MonoBehaviour
     //Public Variable
     public List<ChefController> 
         _players = new List<ChefController>();
+    public bool
+        _isGameOver;
 
+    //Private Variables
     List<int>
         _pointRecord;
 
@@ -53,6 +56,7 @@ public class PointManager : MonoBehaviour
                 gameOver = false;
         if (gameOver)
         {
+            _isGameOver = true;
             Color winningColor = Color.grey;
 
             if (_pointRecord[0] > _pointRecord[1])
